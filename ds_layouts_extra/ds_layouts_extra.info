@@ -1,0 +1,4 @@
+name = Display Suite Extra Layouts
+description = More layouts for display suite.
+core = 7.x
+package = Display Suite

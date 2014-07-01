@@ -1,0 +1,4 @@
+name = Term hider
+description = Hide taxonomy terms on term pages, and other improvements.
+core = 7.x
+package = Hemingway

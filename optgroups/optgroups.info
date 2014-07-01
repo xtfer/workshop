@@ -1,0 +1,6 @@
+name = Optgroups
+description = Provides optgroups for selects and checkboxes
+core = 7.x
+
+dependencies[] = options
+dependencies[] = taxonomy

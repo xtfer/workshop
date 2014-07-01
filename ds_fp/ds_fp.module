@@ -1,0 +1,77 @@
+<?php
+/**
+ * @file
+ * Create fields in code quickly using field prototypes.
+ *
+ * @copyright Copyright(c) 2012 Christopher Skene
+ * @license GPL v2 http://www.fsf.org/licensing/licenses/gpl.html
+ * @author Chris Skene chris at xtfer dot com
+ */
+
+use Drupal\ds_fp\Field\Prototype;
+
+/**
+ * Factory function to load a field prototype.
+ *
+ * @param string $module
+ *   The module requesting the field.
+ * @param string $machine_name
+ *   The machine name for the field.
+ * @param int $type
+ *   (optional) The field type.
+ *
+ * @return Prototype
+ *   A field prototype.
+ */
+function ds_fp_field_prototype($module, $machine_name, $type = DS_FIELD_TYPE_FUNCTION) {
+  $field = new Prototype($module, $machine_name, $type);
+  return $field;
+}
+
+/**
+ * Factory function to create a full field with title.
+ *
+ * Useful when you don't need anything but the basics. This will create a
+ * function field which calls a function called:
+ * MODULE_MACHINE-NAME_field.
+ *
+ * @param string $module
+ *   The module requesting the field.
+ * @param string $machine_name
+ *   The machine name for the field.
+ * @param string $name
+ *   The field name.
+ *
+ * @return Prototype
+ *   A field prototype.
+ */
+function ds_fp_function_field($module, $machine_name, $name) {
+  $field = new Prototype($module, $machine_name, DS_FIELD_TYPE_FUNCTION);
+  $field->setTitle($name);
+  return $field->field();
+}
+
+/**
+ * Helper to make a tag.
+ *
+ * @param string $element
+ *   The type of element to generate.
+ * @param string $content
+ *   The content
+ * @param array $attributes
+ *   (optional) An array of attributes.
+ *
+ * @return string
+ *   A formatted tag.
+ *
+ * @see drupal_attributes()
+ */
+function ds_fp_create_tag($element, $content, $attributes = array()) {
+  if (!empty($attributes)) {
+    $attr = ' ' . drupal_attributes($attributes);
+  }
+  else {
+    $attr = '';
+  }
+  return '<' . $element . $attr . '>' . $content . '</' . $element . '>';
+}

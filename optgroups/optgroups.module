@@ -1,0 +1,364 @@
+<?php
+/**
+ * @file
+ * Provides optgroups for select's and checkboxes
+ *
+ * @copyright Copyright(c) 2012 Christopher Skene
+ * @license GPL v2 http://www.fsf.org/licensing/licenses/gpl.html
+ * @author Chris Skene chris at xtfer dot com
+ */
+
+/**
+ * Retrieve a list of fields requiring optgroups.
+ *
+ * @param string $entity_type
+ *   The entity type.
+ * @param string $bundle
+ *   The entity bundle
+ *
+ * @return array|bool
+ *   An array of fields to set optgroups for, or FALSE.
+ */
+function optgroups_get_fields($entity_type, $bundle) {
+  static $optgroups;
+
+  if (!is_array($optgroups)) {
+    $optgroups = array();
+  }
+
+  if (array_key_exists($entity_type, $optgroups)
+    && is_array($optgroups[$entity_type])
+    && array_key_exists($bundle, $optgroups[$entity_type])
+    && is_array($optgroups[$entity_type][$bundle])
+  ) {
+    return $optgroups[$entity_type][$bundle];
+  }
+  else {
+    if (!array_key_exists($entity_type, $optgroups)) {
+      $optgroups[$entity_type] = array();
+    }
+    $setting = optgroups_get_setting($entity_type, $bundle);
+    if (!empty($setting)) {
+      $optgroups[$entity_type][$bundle] = $setting;
+      return $optgroups[$entity_type][$bundle];
+    }
+    else {
+      $optgroups[$entity_type][$bundle] = array();
+    }
+  }
+
+  return FALSE;
+}
+
+/**
+ * Get the optgroups settings for an individual entity and bundle combo.
+ *
+ * @param string $entity_type
+ *   The entity type.
+ * @param string $bundle
+ *   The bundle.
+ *
+ * @return bool|array
+ *   An array of field settings.
+ */
+function optgroups_get_setting($entity_type, $bundle) {
+  $name = 'optgroups_' . $entity_type . '_' . $bundle;
+  $setting = variable_get($name, array());
+  if (!empty($setting)) {
+    return $setting;
+  }
+
+  return FALSE;
+}
+
+/**
+ * Set the optgroups settings for an individual entity and bundle combo.
+ *
+ * @param string $entity_type
+ *   The entity type.
+ * @param string $bundle
+ *   The bundle.
+ * @param string $field_name
+ *   Name of the field to set.
+ * @param array $field_settings
+ *   An array of field settings.
+ */
+function optgroups_set_field_setting($entity_type, $bundle, $field_name, $field_settings = array()) {
+  $name = 'optgroups_' . $entity_type . '_' . $bundle;
+
+  $settings = variable_get($name, array());
+  $settings[$field_name] = $field_settings;
+
+  variable_set($name, $settings);
+}
+
+/**
+ * Test if optgroups is enabled for a field.
+ *
+ * @param string $entity_type
+ *   The entity type.
+ * @param string $bundle
+ *   The bundle.
+ * @param string $field_name
+ *   Name of the field to set.
+ *
+ * @return bool
+ *   TRUE, if the setting is enabled, or FALSE.
+ */
+function optgroups_enabled($entity_type, $bundle, $field_name) {
+  $settings = optgroups_get_fields($entity_type, $bundle);
+  if (array_key_exists($field_name, $settings)) {
+    if (array_key_exists('enabled', $settings[$field_name]) && $settings[$field_name]['enabled'] == TRUE) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+
+/**
+ * Implements hook_form_alter().
+ *
+ * @todo support multilingual
+ */
+function optgroups_form_alter(&$form, &$form_state, $form_id) {
+
+  // Alter forms for editing node entities.
+  if (isset($form['type']) && isset($form['#node']) && $form['type']['#value'] . '_node_form' == $form_id) {
+
+    $optgroup_fields = optgroups_get_fields('node', $form['type']['#value']);
+
+    if (!empty($optgroup_fields)) {
+      foreach ($optgroup_fields as $field => $settings) {
+        if (optgroups_enabled('node', $form['type']['#value'], $field)) {
+          $form[$field][LANGUAGE_NONE]['#optgroup_options'] = optgroups_vocabulary_options_optgroups($settings['vocab']);
+        }
+      }
+    }
+  }
+
+  // Alter forms for editing entity properties.
+  if ($form['#form_id'] == 'field_ui_field_edit_form') {
+    $optgroup_fields = optgroups_get_fields($form['#instance']['entity_type'], $form['#instance']['bundle']);
+
+    if (array_key_exists('#field', $form) && $form['#field']['type'] == 'taxonomy_term_reference') {
+
+      $default = 'none';
+      if (optgroups_enabled($form['#instance']['entity_type'], $form['#instance']['bundle'], $form['#field']['field_name'])) {
+        if (array_key_exists('setting', $optgroup_fields[$form['#field']['field_name']])) {
+          $default = $optgroup_fields[$form['#field']['field_name']]['setting'];
+        }
+      }
+
+      $form['instance']['optgroups'] = array(
+        '#type' => 'select',
+        '#title' => t('Optgroup settings'),
+        '#options' => array(
+          'top' => t('Use top-level terms as optgroups'),
+          'none' => t('No optgroups'),
+        ),
+        '#default_value' => $default,
+        '#description' => t('If selected, the top-level of hierarchical vocabularies will be used as groups on the form, and will not be selectable.'),
+      );
+
+      $form['#submit'][] = 'optgroups_field_ui_edit_submit';
+    }
+  }
+}
+
+/**
+ * Form submit callback added by optgroups_form_alter().
+ */
+function optgroups_field_ui_edit_submit($form, &$form_state) {
+
+  if (array_key_exists('optgroups', $form_state['values']['instance'])) {
+
+    // Get default vars.
+    $entity_type = $form_state['values']['instance']['entity_type'];
+    $bundle = $form_state['values']['instance']['bundle'];
+    $field_name = $form_state['values']['instance']['field_name'];
+
+    if ($form_state['values']['instance']['optgroups'] == 'none') {
+      $field_settings = array(
+        'enabled' => FALSE,
+      );
+    }
+    else {
+      $field_settings = array(
+        'enabled' => TRUE,
+        'vocab' => $form_state['values']['field']['settings']['allowed_values'][0]['vocabulary'],
+        'setting' => $form_state['values']['instance']['optgroups'],
+      );
+    }
+
+    // Save it.
+    optgroups_set_field_setting($entity_type, $bundle, $field_name, $field_settings);
+  }
+}
+
+/**
+ * Helper to turn a taxonomy into optgroups.
+ *
+ * @param string $vocab_name
+ *   Machine name of the vocab.
+ * @param string $language
+ *   (optional) A language key. Defaults to LANGUAGE_NONE
+ *
+ * @return array
+ *   The options array.
+ */
+function optgroups_vocabulary_options_optgroups($vocab_name, $language = LANGUAGE_NONE) {
+  $vocab = taxonomy_vocabulary_machine_name_load($vocab_name);
+  $top_level = taxonomy_get_tree($vocab->vid, 0, 1);
+
+  $options = array();
+  foreach ($top_level as $term) {
+    $options[$term->tid] = array(
+      '#title' => $term->name,
+      '#markup' => '<strong>' . $term->name . '</strong>',
+      '#prefix' => '<div>',
+      '#suffix' => '</div>',
+      '#optgroup' => TRUE,
+    );
+    $children = taxonomy_get_tree($vocab->vid, $term->tid);
+    foreach ($children as $child) {
+      $options[$term->tid]['#optgroup_options'][$child->tid] = $child->name;
+    }
+  }
+
+  return $options;
+}
+
+/**
+ * Implements hook_element_info_alter().
+ */
+function optgroups_element_info_alter(&$types) {
+  // Change the process callback for checkbox elements to our own.
+  $types['checkboxes']['#process'] = array('optgroups_form_process_checkboxes');
+  $types['checkboxes']['#value_callback'] = 'optgroups_form_type_checkboxes_value';
+}
+
+/**
+ * Processes a checkboxes form element.
+ */
+function optgroups_form_process_checkboxes($element) {
+
+  $value = is_array($element['#value']) ? $element['#value'] : array();
+  $element['#tree'] = TRUE;
+
+  if (array_key_exists('#options', $element) && !empty($element['#options']) && count($element['#options']) > 0) {
+    if (!isset($element['#default_value']) || $element['#default_value'] == 0) {
+      $element['#default_value'] = array();
+    }
+    $weight = 0;
+
+    if (array_key_exists('#optgroup_options', $element)) {
+      $options = $element['#optgroup_options'];
+    }
+    else {
+      $options = $element['#options'];
+    }
+    foreach ($options as $key => $choice) {
+      // Integer 0 is not a valid #return_value, so use '0' instead.
+      // @see form_type_checkbox_value().
+      if ($key === 0) {
+        $key = '0';
+      }
+      // Maintain order of options as defined in #options, in case the element
+      // defines custom option sub-elements, but does not define all option
+      // sub-elements.
+      $weight += 0.001;
+
+      $element += array($key => array());
+
+      if (is_array($choice) && array_key_exists('#optgroup', $choice) && $choice['#optgroup'] == TRUE) {
+        // This is an optgroup.
+        $element['#type'] = 'fieldset';
+        if (array_key_exists('#optgroup_options', $choice)) {
+          foreach ($choice['#optgroup_options'] as $optgroup_tid => $optgroup_term_name) {
+            $choice[$optgroup_tid] = array(
+              '#type' => 'checkbox',
+              '#title' => $optgroup_term_name,
+              '#return_value' => $optgroup_tid,
+              '#default_value' => isset($value[$optgroup_tid]) ? $optgroup_tid : NULL,
+              '#attributes' => $element['#attributes'],
+              '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
+            );
+          }
+        }
+        $element[$key] = $choice;
+        $element[$key]['#type'] = 'checkboxes';
+        $element[$key]['#weight'] = $weight;
+      }
+      else {
+        // This is a standard element.
+        $element[$key] += array(
+          '#type' => 'checkbox',
+          '#title' => $choice,
+          '#return_value' => $key,
+          '#default_value' => isset($value[$key]) ? $key : NULL,
+          '#attributes' => $element['#attributes'],
+          '#ajax' => isset($element['#ajax']) ? $element['#ajax'] : NULL,
+          '#weight' => $weight,
+        );
+      }
+    }
+  }
+  return $element;
+}
+
+/**
+ * Determines the value for a checkboxes form element.
+ *
+ * This differs from form_type_checkboxes_value() in that we check if provided
+ * values are nested arrays.
+ *
+ * @param array $element
+ *   The form element whose value is being populated.
+ * @param bool|array $input
+ *   The incoming input to populate the form element. If this is FALSE,
+ *   the element's default value should be returned.
+ *
+ * @return array
+ *   The data that will appear in the $element_state['values'] collection
+ *   for this element. Return nothing to use the default.
+ */
+function optgroups_form_type_checkboxes_value($element, $input = FALSE) {
+
+  if ($input === FALSE) {
+    $value = array();
+    $element += array('#default_value' => array());
+    foreach ($element['#default_value'] as $key) {
+      $value[$key] = $key;
+    }
+    return $value;
+  }
+  elseif (is_array($input)) {
+    // Programmatic form submissions use NULL to indicate that a checkbox
+    // should be unchecked; see drupal_form_submit(). We therefore remove all
+    // NULL elements from the array before constructing the return value, to
+    // simulate the behavior of web browsers (which do not send unchecked
+    // checkboxes to the server at all). This will not affect non-programmatic
+    // form submissions, since all values in $_POST are strings.
+    foreach ($input as $key => $value) {
+      if (!isset($value)) {
+        unset($input[$key]);
+      }
+      elseif (is_array($value)) {
+        if (!empty($value)) {
+          foreach ($value as $v_key => $v_value) {
+            if (isset($v_value)) {
+              $input[$v_key] = $v_value;
+            }
+          }
+        }
+        unset($input[$key]);
+      }
+
+    }
+    return drupal_map_assoc($input);
+  }
+  else {
+    return array();
+  }
+}

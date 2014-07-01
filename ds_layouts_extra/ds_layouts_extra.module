@@ -1,0 +1,49 @@
+<?php
+/**
+ * @file
+ * Provides extra layouts for Display Suite.
+ *
+ * @copyright Copyright(c) 2012 Chris Skene
+ * @license GPL v2 http://www.fsf.org/licensing/licenses/gpl.html
+ * @author Chris Skene chris at xtfer dot com
+ */
+
+/**
+ * Implements hook_ds_layout_info().
+ */
+function ds_layouts_extra_ds_layout_info() {
+  $path = drupal_get_path('module', 'ds_layouts_extra');
+  $layouts = array(
+    'dsle_sidebar_right_2col' => array(
+      'label' => t('Main column + sidebar right'),
+      'path' => $path . '/layouts/dsle_sidebar_right_2col',
+      'regions' => array(
+        'header' => t('Header'),
+        'main_header' => t('Main - header'),
+        'main_left' => t('Main - left'),
+        'main_right' => t('Main - right'),
+        'main_footer' => t('Main - footer'),
+        'right' => t('Right'),
+        'footer' => t('Footer'),
+      ),
+      'css' => TRUE,
+      'image' => TRUE,
+    ),
+    'dsle_3col_stacked_fluid' => array(
+      'label' => t('Fluid three column stacked - 33/33/33'),
+      'path' => $path . '/layouts/dsle_3col_stacked_fluid',
+      'regions' => array(
+        'header' => t('Header'),
+        'left' => t('Left'),
+        'middle' => t('Middle'),
+        'right' => t('Right'),
+        'footer' => t('Footer'),
+      ),
+      'css' => TRUE,
+      'image' => TRUE,
+    ),
+
+  );
+
+  return $layouts;
+}

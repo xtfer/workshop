@@ -1,0 +1,7 @@
+name = Display Suite Field Prototypes
+description = Developer tool for quickly creating new Display Suite fields
+core = 7.x
+package = Display Suite
+php = 5.3
+
+dependencies[] = xautoload

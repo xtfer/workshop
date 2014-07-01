@@ -1,0 +1,6 @@
+name = Zing
+description = Helpful rendering and form tools for developers.
+core = 7.x
+
+dependencies[] = uuid
+dependencies[] = xautoload

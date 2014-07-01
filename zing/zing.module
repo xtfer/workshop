@@ -1,0 +1,34 @@
+<?php
+/**
+ * @file
+ * The Zing module.
+ *
+ * @copyright Copyright(c) 2012 Previous Next Pty Ltd
+ * @license GPL v2 http://www.fsf.org/licensing/licenses/gpl.html
+ * @author Chris Skene chris at previousnext dot com dot au
+ */
+
+/**
+ * Define a variable with no valid value.
+ */
+const ZING_NO_VALUE = 'zing_no_value';
+
+/**
+ * Initialise a form.
+ *
+ * @param array|null $form
+ *   The form.
+ * @param array|null $form_state
+ *   The form state.
+ *
+ * @return Drupal\zing\Handler\Form
+ *   A form wrapper.
+ */
+function zing_form($form = NULL, $form_state = NULL) {
+
+  $zing_form = new \Drupal\zing\Handler\Form();
+  $zing_form->loadForm($form);
+  $zing_form->applyFormState($form_state);
+
+  return $zing_form;
+}

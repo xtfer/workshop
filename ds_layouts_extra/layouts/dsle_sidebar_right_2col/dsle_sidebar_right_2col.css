@@ -1,0 +1,34 @@
+/**
+ * @file
+ * Styling for the ds-3col-stacked-fluid template.
+ */
+
+.dsle-sidebar-right-2col > .group-header,
+.dsle-sidebar-right-2col > .group-main > .group-main-header,
+.dsle-sidebar-right-2col > .group-footer,
+.dsle-sidebar-right-2col > .group-main > .group-main-footer
+{
+  clear: both;
+}
+
+.dsle-sidebar-right-2col > .group-main {
+  width: 70%;
+  float: left; /* LTR */
+}
+
+.dsle-sidebar-right-2col.group-main-one-col > .group-main > .group-main-left,
+.dsle-sidebar-right-2col.group-main-one-col > .group-main > .group-main-right {
+  width: 100%;
+}
+
+.dsle-sidebar-right-2col.group-main-two-cols > .group-main > .group-main-left,
+.dsle-sidebar-right-2col.group-main-two-cols > .group-main > .group-main-right
+{
+  float: left;
+  width: 50%;
+}
+
+.dsle-sidebar-right-2col .group-right {
+  width: 30%;
+  float: right;
+}
